@@ -28,8 +28,8 @@ func (s Status) String() string {
 	return [...]string{"Inactive", "Active", "Expired"}[s]
 }
 
-// Banner encapsulates the behaviour of when the promo is to be displayed
-type Banner struct {
+// Promo encapsulates the behaviour of when the promo is to be displayed
+type Promo struct {
 	// associated promotion?
 	name   string
 	start  time.Time
@@ -37,49 +37,49 @@ type Banner struct {
 	status Status
 }
 
-var promos map[string]*Banner
+var promos map[string]*Promo
 
 func reset() {
 	promos = nil
 }
 
-func (b *Banner) changeStatus() {
+func (p *Promo) changeStatus() {
 	// TODO need mutex around here for thread-safety?
-	if b.status == Inactive {
-		b.status = Active
+	if p.status == Inactive {
+		p.status = Active
 
-		b.waitForNextTransition(b.end)
-	} else if b.status == Active {
-		b.status = Expired
+		p.waitForNextTransition(p.end)
+	} else if p.status == Active {
+		p.status = Expired
 
-		delete(promos, b.name)
+		delete(promos, p.name)
 	}
-	fmt.Printf("%v Banner status changed(%v)\n", timeclock.Now(), b.status)
+	fmt.Printf("%v Promo status changed(%v)\n", timeclock.Now(), p.status)
 }
 
-func (b *Banner) waitForNextTransition(t time.Time) {
+func (p *Promo) waitForNextTransition(t time.Time) {
 	now := timeclock.Now()
 	interval := t.Sub(now)
 
 	// start timer ticking for the next promo state transition
 	go func() {
-		fmt.Printf("%v Banner waiting for %v.\n", timeclock.Now(), interval)
+		fmt.Printf("%v Promo waiting for %v.\n", timeclock.Now(), interval)
 		timer := timeclock.Timer(interval)
 		<-timer.C
-		b.changeStatus()
+		p.changeStatus()
 	}()
 }
 
-// New returns a new Banner that will be active during the period between startT and endT.
-func New(name string, startT time.Time, endT time.Time) (*Banner, error) {
-	b := &Banner{
+// New returns a new Promo that will be active during the period between startT and endT.
+func New(name string, startT time.Time, endT time.Time) (*Promo, error) {
+	p := &Promo{
 		name:  name,
 		start: startT,
 		end:   endT,
 	}
 
 	if promos == nil {
-		promos = make(map[string]*Banner)
+		promos = make(map[string]*Promo)
 	}
 
 	_, ok := promos[name]
@@ -88,31 +88,31 @@ func New(name string, startT time.Time, endT time.Time) (*Banner, error) {
 	}
 
 	now := timeclock.Now()
-	t := b.start
-	if now.Equal(b.start) || (now.After(b.start) && now.Before(b.end)) {
-		b.status = Active
-		t = b.end
-	} else if now.After(b.end) {
-		b.status = Expired
-		return b, nil
+	t := p.start
+	if now.Equal(p.start) || (now.After(p.start) && now.Before(p.end)) {
+		p.status = Active
+		t = p.end
+	} else if now.After(p.end) {
+		p.status = Expired
+		return p, nil
 	}
-	fmt.Printf("%v Banner created (%v).\n", timeclock.Now(), b.status)
+	fmt.Printf("%v Promo created (%v).\n", timeclock.Now(), p.status)
 
-	promos[name] = b
+	promos[name] = p
 
-	b.waitForNextTransition(t)
+	p.waitForNextTransition(t)
 
-	return b, nil
+	return p, nil
 }
 
 // Name returns the name of the promo
-func (b *Banner) Name() string {
-	return b.name
+func (p *Promo) Name() string {
+	return p.name
 }
 
 // Status returns the current status of the promo
-func (b *Banner) Status() string {
-	return b.status.String()
+func (p *Promo) Status() string {
+	return p.status.String()
 }
 
 var testIPs = [...]string{
@@ -129,32 +129,32 @@ func isTestIP(ip string) bool {
 	return false
 }
 
-func (b *Banner) allowDisplay(qa bool) bool {
+func (p *Promo) allowDisplay(qa bool) bool {
 	if qa {
-		return (b.status != Expired) // QA behaviour
+		return (p.status != Expired) // QA behaviour
 	}
-	return (b.status == Active) // Real behaviour
+	return (p.status == Active) // Real behaviour
 }
 
 // AllowDisplay indicates whether or not the promo may be displayed for the client IP
-func (b *Banner) AllowDisplay(ip string) bool {
-	return b.allowDisplay(isTestIP(ip))
+func (p *Promo) AllowDisplay(ip string) bool {
+	return p.allowDisplay(isTestIP(ip))
 }
 
 // Choose returns the promo to be displayed
-func Choose(ip string) *Banner {
-	var b *Banner
+func Choose(ip string) *Promo {
+	var p *Promo
 
 	if promos == nil {
-		return b
+		return p
 	}
 	// TODO linear search inefficient for large numbers of promos
 	for _, v := range promos {
-		if b == nil && v.AllowDisplay(ip) {
-			b = v
-		} else if v.AllowDisplay(ip) && v.end.Before(b.end) {
-			b = v
+		if p == nil && v.AllowDisplay(ip) {
+			p = v
+		} else if v.AllowDisplay(ip) && v.end.Before(p.end) {
+			p = v
 		}
 	}
-	return b
+	return p
 }

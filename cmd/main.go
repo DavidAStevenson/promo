@@ -11,7 +11,7 @@ func main() {
 	now := time.Now()
 	start := now.Add(2 * time.Second)
 	end := now.Add(5 * time.Second)
-	b1, err1 := promo.New("Demo banner", start, end)
+	b1, err1 := promo.New("Demo promo", start, end)
 	if err1 != nil {
 		fmt.Printf("Created promo: %v, status: %v\n", b1.Name(), b1.Status())
 	}
