@@ -30,12 +30,12 @@ now := time.Now()
 start := now.Add(2 * time.Second)
 end := now.Add(5 * time.Second)
 
-b, _ := promo.New("Demo promo", start, end) // error return ignored for brevity
+p, _ := promo.New("Demo promo", start, end) // error return ignored for brevity
 ```
 
 Use func `promo.Choose` to select the appropriate promo to be displayed, for the given IP address. `promo.Choose` will select from those promos currently within their display period (except when QA IP addresses are specified).
 ```
-b := promo.Choose("192.168.0.1")
+p := promo.Choose("192.168.0.1")
 ```
 
 A promo's name and current status can be displayed with `Name()` and `Status()`, and whether it may be displayed or not is indicated by `AllowDisplay`. 
